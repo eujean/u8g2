@@ -132,6 +132,8 @@ uint8_t u8x8_GetMenuEvent(u8x8_t *u8x8)
 
 #else  /* __unix__ */
 
+static uint16_t hold_count = 0;
+static uint32_t hold_target = 50000;
 
 #define U8X8_DEBOUNCE_WAIT 2
 /* do debounce and return a GPIO msg which indicates the event */
@@ -167,6 +169,8 @@ uint8_t u8x8_GetMenuEvent(u8x8_t *u8x8)
 	/* keypress detected */
 	u8x8->debounce_last_pin_state = pin_state;
 	//result_msg = U8X8_MSG_GPIO_MENU_NEXT;
+    hold_target = 50000;
+    hold_count = 0;
 	u8x8->debounce_state = 0x020 + U8X8_DEBOUNCE_WAIT;	/* got to state C */	
       }
       break;
@@ -191,7 +195,18 @@ uint8_t u8x8_GetMenuEvent(u8x8_t *u8x8)
       }
       else
       {
-	//result_msg = U8X8_MSG_GPIO_MENU_NEXT;
+        if(hold_count >= hold_target)
+        {
+	        result_msg = U8X8_MSG_GPIO(u8x8_find_first_diff(u8x8->debounce_default_pin_state, u8x8->debounce_last_pin_state)+U8X8_PIN_OUTPUT_CNT);
+            hold_target = hold_target - hold_target/10;
+            if(hold_target < 10000)
+            {
+                hold_target = 5000;
+            }
+            hold_count = 0;
+        }
+        hold_count++;
+	    //result_msg = U8X8_MSG_GPIO_MENU_NEXT;
 	// maybe implement autorepeat here 
       }
       break;
